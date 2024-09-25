@@ -75,7 +75,8 @@ def get_comments(access_token, POST_ID, version = 20.0):
     params = {
         'access_token': access_token,
         'summary': 'true',
-        'limit': 100  # Number of comments to fetch per request (max 100)
+        'limit': 100,  # Number of comments to fetch per request (max 100)
+        'order': 'reverse_chronological'
     }
     GRAPH_API_URL = f'https://graph.facebook.com/v{version}/{POST_ID}/comments'
     response = requests.get(GRAPH_API_URL, params=params)
@@ -88,15 +89,15 @@ def get_comments(access_token, POST_ID, version = 20.0):
         return None
     
 # Get all comments
-def get_all_comments(access_token, POST_ID, url, version = 20.0):
+def get_all_comments(access_token, POST_ID, version = 20.0):
     comments = []
+    url = f'https://graph.facebook.com/v{version}/{POST_ID}/comments'
     while url:
         params = {
             'access_token': access_token,
-            'limit': 100  # Maximum number of comments/replies per request
+            'limit': 100,  # Maximum number of comments/replies per request
+            'order': 'reverse_chronological'
         }
-        
-        url = f'https://graph.facebook.com/v{version}/{POST_ID}/comments'
         response = requests.get(url, params=params)
         if response.status_code == 200:
             data = response.json()
@@ -108,16 +109,53 @@ def get_all_comments(access_token, POST_ID, url, version = 20.0):
             url = None  # Stop the loop if an error occurs
     return comments
 
+def get_n_comments(post_id, access_token, n, version = 20.0):
+    url = f"https://graph.facebook.com/v{version}/{post_id}/comments"
+    comments = []
+    limit = 100  # Maximum allowed limit
+    
+    params = {
+        'fields': 'from,message,created_time',
+        'access_token': access_token,
+        'limit': limit,
+        'order': 'reverse_chronological'
+    }
+    
+    while url and len(comments) < n:
+        response = requests.get(url, params=params)
+        
+        if response.status_code == 200:
+            data = response.json().get('data', [])
+            
+            # Append comments to the list
+            comments.extend(data)
+            
+            # Check if we've reached the desired count
+            if len(comments) >= n:
+                break
+            
+            # Get the next page of comments, if available
+            paging = response.json().get('paging', {})
+            url = paging.get('next', None)  # Update URL to the next page, or None if no more pages
+        # else:
+        #     print(f"Error: {response.status_code}")
+        #     print(response.text)
+            return None
+    
+    # Trim the comments to the exact count needed (if more were retrieved due to pagination)
+    return comments[:n]
+
+
 # Get all replies
 def get_all_replies(access_token,COMMENT_ID, version = 20.0):
+    url = f'https://graph.facebook.com/v{version}/{COMMENT_ID}/comments'
     replies = []
     while url:
         params = {
             'access_token': access_token,
-            'limit': 100  # Maximum number of comments/replies per request
+            'limit': 100,  # Maximum number of comments/replies per request
+            'order': 'reverse_chronological'
         }
-        
-        url = f'https://graph.facebook.com/v{version}/{COMMENT_ID}/comments'
         response = requests.get(url, params=params)
         if response.status_code == 200:
             data = response.json()
@@ -136,7 +174,8 @@ def get_replies(access_token, COMMENT_ID, version = 20.0):
     params = {
         'access_token': access_token,
         'summary': 'true',
-        'limit': 100  # Number of replies to fetch per request (max 100)
+        'limit': 100,  # Number of replies to fetch per request (max 100)
+        'order': 'reverse_chronological'
     }
     response = requests.get(url, params=params)
     if response.status_code == 200:
@@ -176,6 +215,22 @@ def delete_comment(comment_id, access_token, version = 20.0):
 # Function to get reaction counts of posts
 def get_reaction_counts(POST_ID, access_token, version = 20.0):
     url = f"https://graph.facebook.com/v{version}/{POST_ID}"
+    params = {
+        'fields': 'reactions.summary(true)',
+        'access_token': access_token
+    }
+    
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        total_reactions = data.get('reactions', {}).get('summary', {}).get('total_count', 0)
+        return total_reactions
+    else:
+        return f"Error: {response.status_code}, {response.text}"
+
+# Function to get reactions
+def get_reaction_counts(post_id, access_token, version = 20.0):
+    url = f"https://graph.facebook.com/v{version}/{post_id}"
     params = {
         'fields': 'reactions.summary(true)',
         'access_token': access_token
