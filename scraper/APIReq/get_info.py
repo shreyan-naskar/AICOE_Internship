@@ -1,6 +1,19 @@
 import requests
 
-# get post ids of facebook page
+# 1. get_post_ids
+# 2. get_post_date
+# 3. get_facebook_post_caption
+# 4. get_comment_count
+# 5. get_comments
+# 6. get_all_comments
+# 7. get_n_comments
+# 8. get_all_replies
+# 9. get_replies
+# 10. hide_comment
+# 11. delete_comment
+# 12. get_reaction_counts
+
+# Function to get post ids of facebook page
 def get_post_ids(PAGE_ID, access_token, version = 20.0, limit = 100):
     """
     Get post IDs from a Facebook page using the Graph API.
@@ -26,8 +39,6 @@ def get_post_ids(PAGE_ID, access_token, version = 20.0, limit = 100):
         print(f"Failed to retrieve posts: {response.status_code}")
         return []
     
-import requests
-
 # Function to get date of facebook post
 def get_post_date(POST_ID, access_token, version = 20.0):
     url = f"https://graph.facebook.com/v{version}/{POST_ID}"
@@ -42,7 +53,6 @@ def get_post_date(POST_ID, access_token, version = 20.0):
         return data.get('created_time', 'Date not found')
     else:
         return f"Error: {response.status_code}, {response.text}"
-
 
 # Function to get captions of posts
 def get_facebook_post_caption(POST_ID, access_token, version = 20.0):
@@ -69,7 +79,27 @@ def get_facebook_post_caption(POST_ID, access_token, version = 20.0):
         print(f"Failed to retrieve post: {response.status_code}")
         return None
 
-
+# Function to get number of comments
+def get_comment_count(post_id, access_token, version = 20.0):
+    url = f"https://graph.facebook.com/v{version}/{post_id}"
+    
+    params = {
+        'fields': 'comments.summary(total_count)',  # Request only the total count of comments
+        'access_token': access_token
+    }
+    
+    response = requests.get(url, params=params)
+    
+    if response.status_code == 200:
+        data = response.json()
+        comment_count = data.get('comments', {}).get('summary', {}).get('total_count', 0)
+        # print(f"Total Comments: {comment_count}")
+        return comment_count
+    else:
+        # print(f"Error: {response.status_code}")
+        # print(response.text)
+        return None
+    
 # Function to get comments
 def get_comments(access_token, POST_ID, version = 20.0):
     params = {
@@ -145,7 +175,6 @@ def get_n_comments(post_id, access_token, n, version = 20.0):
     # Trim the comments to the exact count needed (if more were retrieved due to pagination)
     return comments[:n]
 
-
 # Get all replies
 def get_all_replies(access_token,COMMENT_ID, version = 20.0):
     url = f'https://graph.facebook.com/v{version}/{COMMENT_ID}/comments'
@@ -209,22 +238,6 @@ def delete_comment(comment_id, access_token, version = 20.0):
     response = requests.delete(url, params=params)
     if response.status_code == 200:
         return "Comment deleted successfully."
-    else:
-        return f"Error: {response.status_code}, {response.text}"
-    
-# Function to get reaction counts of posts
-def get_reaction_counts(POST_ID, access_token, version = 20.0):
-    url = f"https://graph.facebook.com/v{version}/{POST_ID}"
-    params = {
-        'fields': 'reactions.summary(true)',
-        'access_token': access_token
-    }
-    
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        data = response.json()
-        total_reactions = data.get('reactions', {}).get('summary', {}).get('total_count', 0)
-        return total_reactions
     else:
         return f"Error: {response.status_code}, {response.text}"
 
